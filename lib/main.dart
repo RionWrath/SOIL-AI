@@ -5,6 +5,8 @@ import 'dart:convert';
 void main() => runApp(SoilMonitoringApp());
 
 class SoilMonitoringApp extends StatelessWidget {
+  const SoilMonitoringApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -15,13 +17,15 @@ class SoilMonitoringApp extends StatelessWidget {
 }
 
 class SoilMonitoringDashboard extends StatefulWidget {
+  const SoilMonitoringDashboard({super.key});
+
   @override
   _SoilMonitoringDashboardState createState() =>
       _SoilMonitoringDashboardState();
 }
 
 class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
-  final String baseUrl = "https://soilapi.hcorp.my.id/api";
+  final String baseUrl = "https://soilapi.hcorp.my.id/api/";
   Map<String, dynamic> realTimeData = {};
   List<dynamic> averageDailyData = [];
   String latestMessage = "";
