@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-void main() => runApp(SoilMonitoringApp());
+void main() => runApp(const SoilMonitoringApp());
 
 class SoilMonitoringApp extends StatelessWidget {
   const SoilMonitoringApp({super.key});
@@ -10,7 +10,7 @@ class SoilMonitoringApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: SoilMonitoringDashboard(),
+      home: const SoilMonitoringDashboard(),
       debugShowCheckedModeBanner: false,
     );
   }
@@ -29,6 +29,7 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
   Map<String, dynamic> realTimeData = {};
   List<dynamic> averageDailyData = [];
   String latestMessage = "";
+  bool isLoading = true;
 
   @override
   void initState() {
@@ -37,13 +38,21 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
   }
 
   Future<void> fetchData() async {
-    await fetchRealTimeData();
-    await fetchAverageDailyData();
-    await fetchLatestMessage();
+    setState(() {
+      isLoading = true;
+    });
+    await Future.wait([
+      fetchRealTimeData(),
+      fetchAverageDailyData(),
+      fetchLatestMessage(),
+    ]);
+    setState(() {
+      isLoading = false;
+    });
   }
 
   Future<void> fetchRealTimeData() async {
-    final url = Uri.parse("$baseUrl/get_collect_data");
+    final url = Uri.parse("$baseUrl/get_all_collect_data");
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -51,6 +60,8 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
         setState(() {
           realTimeData = data.isNotEmpty ? data.first : {};
         });
+      } else {
+        print("Failed to fetch real-time data. Status: ${response.statusCode}");
       }
     } catch (e) {
       print("Error fetching real-time data: $e");
@@ -58,7 +69,7 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
   }
 
   Future<void> fetchAverageDailyData() async {
-    final url = Uri.parse("$baseUrl/get_average_daily");
+    final url = Uri.parse("$baseUrl/get_all_average_daily");
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -66,6 +77,9 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
         setState(() {
           averageDailyData = data;
         });
+      } else {
+        print(
+            "Failed to fetch average daily data. Status: ${response.statusCode}");
       }
     } catch (e) {
       print("Error fetching average daily data: $e");
@@ -81,6 +95,8 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
         setState(() {
           latestMessage = data['data']['message'] ?? "No message available";
         });
+      } else {
+        print("Failed to fetch latest message. Status: ${response.statusCode}");
       }
     } catch (e) {
       print("Error fetching latest message: $e");
@@ -91,7 +107,7 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           'SOIL.AI',
           style: TextStyle(
             color: Colors.white,
@@ -101,111 +117,100 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
         ),
         backgroundColor: Colors.blue[500],
       ),
-      body: Padding(
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Real-time Section
+                    buildCard(
+                      title: "Real-Time Data",
+                      content: realTimeData.isNotEmpty
+                          ? GridView.count(
+                              shrinkWrap: true,
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 8,
+                              crossAxisSpacing: 8,
+                              childAspectRatio: 2,
+                              children: [
+                                buildDataCard(
+                                    'Temperature',
+                                    '${realTimeData['temperature']}°C',
+                                    Colors.orange),
+                                buildDataCard(
+                                    'Air Humidity',
+                                    '${realTimeData['air_humidity']}%',
+                                    Colors.blue),
+                                buildDataCard(
+                                    'Soil Humidity',
+                                    '${realTimeData['soil_humidity']}%',
+                                    Colors.green),
+                              ],
+                            )
+                          : const Text("No real-time data available."),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Average Daily Section
+                    buildCard(
+                      title: "Average Daily Data",
+                      content: averageDailyData.isNotEmpty
+                          ? ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: averageDailyData.length,
+                              itemBuilder: (context, index) {
+                                final item = averageDailyData[index];
+                                return ListTile(
+                                  title: Text(item['date']),
+                                  subtitle: Text(
+                                    'Temp: ${item['average_temperature']}°C, Air Hum: ${item['average_air_humidity']}%, Soil Hum: ${item['average_soil_humidity']}%',
+                                  ),
+                                );
+                              },
+                            )
+                          : const Text("No average daily data available."),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Latest Message Section
+                    buildCard(
+                      title: "Latest Message",
+                      content: Text(
+                        latestMessage,
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.blue[700],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget buildCard({required String title, required Widget content}) {
+    return Card(
+      elevation: 4,
+      child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Real-time Section
-            Card(
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Real-Time Data',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    SizedBox(height: 16),
-                    realTimeData.isNotEmpty
-                        ? GridView.count(
-                            shrinkWrap: true,
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 8,
-                            crossAxisSpacing: 8,
-                            childAspectRatio: 2,
-                            children: [
-                              buildDataCard('Temperature', '${realTimeData['temperature']}°C', Colors.orange),
-                              buildDataCard('Air Humidity', '${realTimeData['air_humidity']}%', Colors.blue),
-                              buildDataCard('Soil Humidity', '${realTimeData['soil_humidity']}%', Colors.green),
-                            ],
-                          )
-                        : Center(child: CircularProgressIndicator()),
-                  ],
-                ),
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
               ),
             ),
-            SizedBox(height: 16),
-
-            // Average Daily Section
-            Card(
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Average Daily Data',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    averageDailyData.isNotEmpty
-                        ? ListView.builder(
-                            shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
-                            itemCount: averageDailyData.length,
-                            itemBuilder: (context, index) {
-                              final item = averageDailyData[index];
-                              return ListTile(
-                                title: Text(item['date']),
-                                subtitle: Text(
-                                    'Temp: ${item['average_temperature']}°C, Air Hum: ${item['average_air_humidity']}%, Soil Hum: ${item['average_soil_humidity']}%'),
-                              );
-                            },
-                          )
-                        : Center(child: CircularProgressIndicator()),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: 16),
-
-            // Latest Message Section
-            Card(
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Latest Message',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      latestMessage,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.blue[700],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            const SizedBox(height: 8),
+            content,
           ],
         ),
       ),
@@ -228,10 +233,10 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
                 color: color,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
               value,
-              style: TextStyle(fontSize: 14),
+              style: const TextStyle(fontSize: 14),
             ),
           ],
         ),
