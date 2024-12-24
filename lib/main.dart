@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 void main() => runApp(SoilMonitoringApp());
 
@@ -21,11 +21,10 @@ class SoilMonitoringDashboard extends StatefulWidget {
 }
 
 class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
-  Map<String, dynamic> data = {
-    "temperature": "Loading...",
-    "air_humidity": "Loading...",
-    "soil_humidity": "Loading..."
-  };
+  final String baseUrl = "https://soilapi.hcorp.my.id/api";
+  Map<String, dynamic> realTimeData = {};
+  List<dynamic> averageDailyData = [];
+  String latestMessage = "";
 
   @override
   void initState() {
@@ -34,35 +33,53 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
   }
 
   Future<void> fetchData() async {
-    const url = 'https://soilapi.hcorp.my.id/';
+    await fetchRealTimeData();
+    await fetchAverageDailyData();
+    await fetchLatestMessage();
+  }
+
+  Future<void> fetchRealTimeData() async {
+    final url = Uri.parse("$baseUrl/get_collect_data");
     try {
-      final response = await http.get(Uri.parse(url));
+      final response = await http.get(url);
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = json.decode(response.body);
+        final List data = json.decode(response.body);
         setState(() {
-          data = {
-            "temperature": responseData['temperature'].toString(),
-            "air_humidity": responseData['air_humidity'].toString(),
-            "soil_humidity": responseData['soil_humidity'].toString(),
-          };
-        });
-      } else {
-        setState(() {
-          data = {
-            "temperature": "Error",
-            "air_humidity": "Error",
-            "soil_humidity": "Error"
-          };
+          realTimeData = data.isNotEmpty ? data.first : {};
         });
       }
     } catch (e) {
-      setState(() {
-        data = {
-          "temperature": "Failed",
-          "air_humidity": "Failed",
-          "soil_humidity": "Failed"
-        };
-      });
+      print("Error fetching real-time data: $e");
+    }
+  }
+
+  Future<void> fetchAverageDailyData() async {
+    final url = Uri.parse("$baseUrl/get_average_daily");
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final List data = json.decode(response.body);
+        setState(() {
+          averageDailyData = data;
+        });
+      }
+    } catch (e) {
+      print("Error fetching average daily data: $e");
+    }
+  }
+
+  Future<void> fetchLatestMessage() async {
+    final url = Uri.parse("$baseUrl/get_message_latest");
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          latestMessage = data['data']['message'] ?? "No message available";
+        });
+      }
+    } catch (e) {
+      print("Error fetching latest message: $e");
     }
   }
 
@@ -101,41 +118,27 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
                       ),
                     ),
                     SizedBox(height: 16),
-                    GridView.count(
-                      shrinkWrap: true,
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
-                      childAspectRatio: 2,
-                      children: [
-                        // Temperature Card
-                        buildCard(
-                          'Temperature',
-                          data['temperature'] + '°C',
-                          Colors.blue,
-                        ),
-                        // Air Humidity Card
-                        buildCard(
-                          'Air Humidity',
-                          data['air_humidity'] + '%',
-                          Colors.green,
-                        ),
-                        // Soil Humidity Card
-                        buildCard(
-                          'Soil Humidity',
-                          data['soil_humidity'] + '%',
-                          Colors.brown,
-                        ),
-                      ],
-                    ),
+                    realTimeData.isNotEmpty
+                        ? GridView.count(
+                            shrinkWrap: true,
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 8,
+                            crossAxisSpacing: 8,
+                            childAspectRatio: 2,
+                            children: [
+                              buildDataCard('Temperature', '${realTimeData['temperature']}°C', Colors.orange),
+                              buildDataCard('Air Humidity', '${realTimeData['air_humidity']}%', Colors.blue),
+                              buildDataCard('Soil Humidity', '${realTimeData['soil_humidity']}%', Colors.green),
+                            ],
+                          )
+                        : Center(child: CircularProgressIndicator()),
                   ],
                 ),
               ),
             ),
-
             SizedBox(height: 16),
 
-            // Next Watering Section
+            // Average Daily Section
             Card(
               elevation: 4,
               child: Padding(
@@ -144,7 +147,44 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Next Watering Schedule',
+                      'Average Daily Data',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    averageDailyData.isNotEmpty
+                        ? ListView.builder(
+                            shrinkWrap: true,
+                            physics: NeverScrollableScrollPhysics(),
+                            itemCount: averageDailyData.length,
+                            itemBuilder: (context, index) {
+                              final item = averageDailyData[index];
+                              return ListTile(
+                                title: Text(item['date']),
+                                subtitle: Text(
+                                    'Temp: ${item['average_temperature']}°C, Air Hum: ${item['average_air_humidity']}%, Soil Hum: ${item['average_soil_humidity']}%'),
+                              );
+                            },
+                          )
+                        : Center(child: CircularProgressIndicator()),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
+
+            // Latest Message Section
+            Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Latest Message',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 18,
@@ -152,7 +192,7 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      'Your plant should be watered in 3 days.',
+                      latestMessage,
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.blue[700],
@@ -162,57 +202,13 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
                 ),
               ),
             ),
-
-            SizedBox(height: 16),
-
-            // History Section
-            Expanded(
-              child: Card(
-                elevation: 4,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'History',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Expanded(
-                        child: ListView(
-                          children: [
-                            ListTile(
-                              leading: Icon(Icons.calendar_today),
-                              title: Text('18 Dec 2024'),
-                              subtitle: Text(
-                                  'Temperature: 22°C | Air Humidity: 45% | Soil Humidity: 30%'),
-                            ),
-                            ListTile(
-                              leading: Icon(Icons.calendar_today),
-                              title: Text('17 Dec 2024'),
-                              subtitle: Text(
-                                  'Temperature: 20°C | Air Humidity: 50% | Soil Humidity: 35%'),
-                            ),
-                            // Add more history entries as needed
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
     );
   }
 
-  Widget buildCard(String title, String value, Color color) {
+  Widget buildDataCard(String title, String value, Color color) {
     return Card(
       elevation: 4,
       child: Padding(
@@ -223,9 +219,9 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
             Text(
               title,
               style: TextStyle(
-                color: color,
                 fontWeight: FontWeight.bold,
                 fontSize: 16,
+                color: color,
               ),
             ),
             SizedBox(height: 8),
