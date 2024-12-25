@@ -11,6 +11,10 @@ class SoilMonitoringApp extends StatelessWidget {
     return MaterialApp(
       home: const SoilMonitoringDashboard(),
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        scaffoldBackgroundColor: Colors.blue[100],
+      ),
     );
+    
   }
 }

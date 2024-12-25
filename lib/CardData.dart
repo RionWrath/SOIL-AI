@@ -5,6 +5,7 @@ import 'dart:convert';
 class CustomCardApp extends StatefulWidget {
   const CustomCardApp({super.key});
 
+  @override
   _CustomCardState createState() => _CustomCardState();
 }
 
@@ -46,8 +47,7 @@ class _CustomCardState extends State<CustomCardApp> {
         if (decodedResponse.containsKey('data') &&
             decodedResponse['data'] is Map<String, dynamic>) {
           setState(() {
-            realTimeData = decodedResponse[
-                'data']; // Directly assign the map to realTimeData
+            realTimeData = decodedResponse['data']; // Directly assign the map to realTimeData
           });
         } else {
           print("No 'data' field or it's not a map.");
@@ -109,8 +109,9 @@ class _CustomCardState extends State<CustomCardApp> {
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
+                // color: const Color.fromARGB(255, 38, 100, 188),
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF4A90E2), Color(0xFF50E3C2)],
+                  colors: [Color(0xFF4A90E2), Color.fromARGB(255, 74, 147, 204)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -130,7 +131,7 @@ class _CustomCardState extends State<CustomCardApp> {
                           Text(
                             "Realtime Database",
                             style: TextStyle(
-                              color: Colors.white,
+                              color: const Color.fromARGB(255, 255, 255, 255),
                               fontSize: 18,
                               fontWeight: FontWeight.w400,
                             ),
@@ -138,7 +139,7 @@ class _CustomCardState extends State<CustomCardApp> {
                           Text(
                             "${realTimeData['created_at']}",
                             style: TextStyle(
-                              color: Colors.white,
+                              color: const Color.fromARGB(255, 255, 255, 255),
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
@@ -158,13 +159,13 @@ class _CustomCardState extends State<CustomCardApp> {
                             title: "Temperature",
                             value: "${realTimeData['temperature']}°",
                             unit: "Celcius",
-                            color: Colors.greenAccent,
+                            color: const Color.fromARGB(255, 255, 255, 255),
                           ),
                           buildInfoCard(
                             title: "Air Humid",
                             value: "${realTimeData['air_humidity']}",
                             unit: "%",
-                            color: Colors.amber,
+                            color: const Color.fromARGB(255, 255, 255, 255),
                           ),
                         ],
                       ),
@@ -176,9 +177,9 @@ class _CustomCardState extends State<CustomCardApp> {
                         children: [
                           buildInfoCard(
                             title: "Soil Humidity",
-                            value: "${realTimeData['soil_humidity']}",
+                            value: "${realTimeData['soil_humidity']}" ,
                             unit: "%",
-                            color: const Color.fromARGB(255, 115, 255, 84),
+                            color: const Color.fromARGB(255, 255, 255, 255),
                           ),
                         ],
                       ),
@@ -191,6 +192,9 @@ class _CustomCardState extends State<CustomCardApp> {
           SizedBox(
             height: 10,
           ),
+
+
+          //Message
           Card(
             elevation: 8,
             shape: RoundedRectangleBorder(
@@ -201,7 +205,7 @@ class _CustomCardState extends State<CustomCardApp> {
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [
-                    Color(0xFF50E3C2),
+                    Color.fromARGB(255, 25, 100, 200),
                     Color(0xFF4A90E2),
                     Color.fromARGB(255, 80, 92, 227)
                   ],
@@ -222,7 +226,7 @@ class _CustomCardState extends State<CustomCardApp> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "Predict",
+                            "Message",
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 24,
@@ -242,11 +246,75 @@ class _CustomCardState extends State<CustomCardApp> {
                         children: [
                           buildInfoCard(
                             title: "Should Watering?",
-                            value: "Yes",
+                            value: latestMessage.isNotEmpty ? latestMessage : "No message",
                             unit: "",
-                            color: const Color.fromARGB(255, 182, 249, 119),
+                            color: const Color.fromARGB(255, 255, 255, 255),
                           ),
                         ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+
+//history
+          Card(
+            elevation: 8,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color.fromARGB(255, 25, 100, 200),
+                    Color(0xFF4A90E2),
+                    Color.fromARGB(255, 139, 144, 194)
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Section
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            
+                            "Average Daily",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  // Data Section
+                  Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                        Text('Avg Temperature: ${averageDailyData} °C'),
+                        Text('Avg Air Humidity:  %'),
+                        Text('Avg Soil Humidity: %')
+                        ]
                       ),
                     ],
                   ),
@@ -279,7 +347,7 @@ class _CustomCardState extends State<CustomCardApp> {
             Text(
               title,
               style: const TextStyle(
-                color: Colors.black54,
+                color: Color.fromARGB(255, 0, 0, 0),
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -289,7 +357,7 @@ class _CustomCardState extends State<CustomCardApp> {
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: Color.fromARGB(217, 33, 33, 33),
               ),
             ),
             const SizedBox(height: 4),
@@ -297,7 +365,7 @@ class _CustomCardState extends State<CustomCardApp> {
               unit,
               style: const TextStyle(
                 fontSize: 12,
-                color: Colors.black54,
+                color: Color.fromARGB(255, 0, 0, 0),
               ),
             ),
           ],

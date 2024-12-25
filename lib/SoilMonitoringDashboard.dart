@@ -24,7 +24,7 @@ class _SoilMonitoringDashboardState extends State<SoilMonitoringDashboard> {
         ),
         backgroundColor: Colors.blue[500],
       ),
-      body: Center(
+      body: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
