@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 
 class CustomCardApp extends StatefulWidget {
   const CustomCardApp({super.key});
@@ -47,7 +48,8 @@ class _CustomCardState extends State<CustomCardApp> {
         if (decodedResponse.containsKey('data') &&
             decodedResponse['data'] is Map<String, dynamic>) {
           setState(() {
-            realTimeData = decodedResponse['data']; // Directly assign the map to realTimeData
+            realTimeData = decodedResponse[
+                'data']; // Directly assign the map to realTimeData
           });
         } else {
           print("No 'data' field or it's not a map.");
@@ -111,7 +113,10 @@ class _CustomCardState extends State<CustomCardApp> {
               decoration: BoxDecoration(
                 // color: const Color.fromARGB(255, 38, 100, 188),
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF4A90E2), Color.fromARGB(255, 74, 147, 204)],
+                  colors: [
+                    Color(0xFF4A90E2),
+                    Color.fromARGB(255, 74, 147, 204)
+                  ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -163,8 +168,8 @@ class _CustomCardState extends State<CustomCardApp> {
                           ),
                           buildInfoCard(
                             title: "Air Humid",
-                            value: "${realTimeData['air_humidity']}",
-                            unit: "%",
+                            value: "${realTimeData['air_humidity']}%",
+                            unit: "",
                             color: const Color.fromARGB(255, 255, 255, 255),
                           ),
                         ],
@@ -177,8 +182,8 @@ class _CustomCardState extends State<CustomCardApp> {
                         children: [
                           buildInfoCard(
                             title: "Soil Humidity",
-                            value: "${realTimeData['soil_humidity']}" ,
-                            unit: "%",
+                            value: "${realTimeData['soil_humidity']}%",
+                            unit: "",
                             color: const Color.fromARGB(255, 255, 255, 255),
                           ),
                         ],
@@ -192,7 +197,6 @@ class _CustomCardState extends State<CustomCardApp> {
           SizedBox(
             height: 10,
           ),
-
 
           //Message
           Card(
@@ -246,7 +250,9 @@ class _CustomCardState extends State<CustomCardApp> {
                         children: [
                           buildInfoCard(
                             title: "Should Watering?",
-                            value: latestMessage.isNotEmpty ? latestMessage : "No message",
+                            value: latestMessage.isNotEmpty
+                                ? latestMessage
+                                : "No data",
                             unit: "",
                             color: const Color.fromARGB(255, 255, 255, 255),
                           ),
@@ -258,7 +264,6 @@ class _CustomCardState extends State<CustomCardApp> {
               ),
             ),
           ),
-
 
 //history
           Card(
@@ -292,7 +297,6 @@ class _CustomCardState extends State<CustomCardApp> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            
                             "Average Daily",
                             style: TextStyle(
                               color: Colors.white,
@@ -309,11 +313,9 @@ class _CustomCardState extends State<CustomCardApp> {
                   Column(
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                        Text('Avg Temperature: ${averageDailyData} °C'),
-                        Text('Avg Air Humidity:  %'),
-                        Text('Avg Soil Humidity: %')
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                          
                         ]
                       ),
                     ],
@@ -329,7 +331,7 @@ class _CustomCardState extends State<CustomCardApp> {
 
   Widget buildInfoCard({
     required String title,
-    required String value,
+    required dynamic value,
     required String unit,
     required Color color,
   }) {

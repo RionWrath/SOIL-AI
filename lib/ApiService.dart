@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:async';
 
 class ApiService {
   final String baseUrl = "https://soilapi.hcorp.my.id/api";
