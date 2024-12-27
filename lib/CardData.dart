@@ -63,7 +63,7 @@ class _CustomCardState extends State<CustomCardApp> {
   }
 
   Future<void> fetchAverageDailyData() async {
-    final url = Uri.parse("$baseUrl/get_all_average_daily");
+    final url = Uri.parse("$baseUrl/get_range_average_daily");
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -89,7 +89,9 @@ class _CustomCardState extends State<CustomCardApp> {
         setState(() {
           latestMessage = data['data']['message'] ?? "No message available";
         });
-      } else {
+        
+      } 
+      else {
         print("Failed to fetch latest message. Status: ${response.statusCode}");
       }
     } catch (e) {
@@ -249,7 +251,7 @@ class _CustomCardState extends State<CustomCardApp> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           buildInfoCard(
-                            title: "Should Watering?",
+                            title: "Status",
                             value: latestMessage.isNotEmpty
                                 ? latestMessage
                                 : "No data",
