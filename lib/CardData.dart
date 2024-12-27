@@ -16,6 +16,9 @@ class _CustomCardState extends State<CustomCardApp> {
   List<dynamic> averageDailyData = [];
   String latestMessage = "";
   bool isLoading = true;
+  String startDate = '';
+  String endDate = '';
+
 
   @override
   void initState() {
@@ -63,20 +66,19 @@ class _CustomCardState extends State<CustomCardApp> {
   }
 
   Future<void> fetchAverageDailyData() async {
-    final url = Uri.parse("$baseUrl/get_range_average_daily");
+    final url = Uri.parse("$baseUrl/get_range_average_daily?start_date=$startDate&end_date=$endDate");
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
-        final List data = json.decode(response.body);
+        final data = json.decode(response.body)['data'];
         setState(() {
           averageDailyData = data;
         });
       } else {
-        print(
-            "Failed to fetch average daily data. Status: ${response.statusCode}");
+        print("Failed to fetch data. Status: ${response.statusCode}");
       }
     } catch (e) {
-      print("Error fetching average daily data: $e");
+      print("Error fetching data: $e");
     }
   }
 
@@ -89,9 +91,7 @@ class _CustomCardState extends State<CustomCardApp> {
         setState(() {
           latestMessage = data['data']['message'] ?? "No message available";
         });
-        
-      } 
-      else {
+      } else {
         print("Failed to fetch latest message. Status: ${response.statusCode}");
       }
     } catch (e) {
@@ -269,59 +269,117 @@ class _CustomCardState extends State<CustomCardApp> {
 
 //history
           Card(
-            elevation: 8,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color.fromARGB(255, 25, 100, 200),
-                    Color(0xFF4A90E2),
-                    Color.fromARGB(255, 139, 144, 194)
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
+              elevation: 8,
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header Section
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Average Daily",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color.fromARGB(255, 25, 100, 200),
+                      Color(0xFF4A90E2),
+                      Color.fromARGB(255, 139, 144, 194)
                     ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Section
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "Average Daily Data",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   const SizedBox(height: 16),
                   // Data Section
+
+                  
                   Column(
                     children: [
-                      Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                          
-                        ]
-                      ),
-                    ],
+                        TextField(
+                          decoration: InputDecoration(
+                            labelText: 'Start Date (YYYY-MM-DD)',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              startDate = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          decoration: InputDecoration(
+                            labelText: 'End Date (YYYY-MM-DD)',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              endDate = value;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        ElevatedButton(
+                          onPressed: fetchAverageDailyData,
+                          child: const Text('Fetch Data'),
+                        ),
+                      ],
                   ),
+
+                  const SizedBox(height: 16),
+
+                  averageDailyData.isEmpty
+                        ? Center(child: CircularProgressIndicator())
+                        : Column(
+                            children: averageDailyData.map<Widget>((dynamic data) {
+                              // Accessing each field from the data object
+                              return Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  buildInfoCard(
+                                    title: "Date Today",
+                                    value: data['date'] ?? "No data",
+                                    unit: "",
+                                    color: const Color.fromARGB(255, 255, 255, 255),
+                                  ),
+                                  buildInfoCard(
+                                    title: "Temp",
+                                    value: data['avg_temperature'] ?? "No data",
+                                    unit: "°C",
+                                    color: const Color.fromARGB(255, 255, 255, 255),
+                                  ),
+                                  buildInfoCard(
+                                    title: "Air Humidity",
+                                    value: data['avg_air_humidity'] ?? "No data",
+                                    unit: "%",
+                                    color: const Color.fromARGB(255, 255, 255, 255),
+                                  ),
+                                  buildInfoCard(
+                                    title: "Soil Humidity",
+                                    value: data['avg_soil_humidity'] ?? "No data",
+                                    unit: "%",
+                                    color: const Color.fromARGB(255, 255, 255, 255),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
                 ],
               ),
             ),
