@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -124,7 +122,7 @@ class _CustomCardState extends State<CustomCardApp> {
       LineChartBarData(
         spots: spotsTemperature,
         isCurved: true,
-        color: const Color(0xff4af699),
+        color: const Color.fromARGB(255, 234, 255, 0),
         barWidth: 4,
         isStrokeCapRound: false,
         belowBarData: BarAreaData(show: false),
@@ -132,7 +130,7 @@ class _CustomCardState extends State<CustomCardApp> {
       LineChartBarData(
         spots: spotsHumidity,
         isCurved: true,
-        color: const Color(0xffaa4cfc),
+        color: const Color.fromARGB(255, 150, 181, 248),
         barWidth: 4,
         isStrokeCapRound: false,
         belowBarData: BarAreaData(show: false),
@@ -140,7 +138,7 @@ class _CustomCardState extends State<CustomCardApp> {
       LineChartBarData(
         spots: spotsSoilHumidity,
         isCurved: true,
-        color: const Color(0xff27b6fc),
+        color: const Color.fromARGB(255, 6, 131, 27),
         barWidth: 4,
         isStrokeCapRound: false,
         belowBarData: BarAreaData(show: false),
@@ -338,8 +336,10 @@ class _CustomCardState extends State<CustomCardApp> {
                             ),
                           ),
                           IconButton(
-                            icon: Icon(Icons.warning_rounded,
-                                size: wp * 0.06, color: Colors.yellow),
+                            icon: Icon(Icons.info,
+                                size: wp * 0.06,
+                                color:
+                                    const Color.fromARGB(255, 255, 255, 255)),
                             onPressed: () {
                               showDialog(
                                 context: context,
@@ -421,7 +421,9 @@ class _CustomCardState extends State<CustomCardApp> {
                           buildInfoCard(
                             title: "Status",
                             value: latestMessage.isNotEmpty
-                                ? latestMessage
+                                ? (latestMessage == "siram"
+                                    ? "Butuh Disiram"
+                                    : "Sudah Disiram")
                                 : "No data",
                             unit: "",
                             color: const Color.fromARGB(255, 255, 255, 255),
@@ -468,6 +470,7 @@ class _CustomCardState extends State<CustomCardApp> {
                     ),
                   ),
                   const SizedBox(height: 16),
+
                   Container(
                     height: hp * 0.5,
                     child: Column(
@@ -484,6 +487,37 @@ class _CustomCardState extends State<CustomCardApp> {
                               ),
                             ),
                           ),
+                        if (isLoading) CircularProgressIndicator(),
+                        // If no data is available
+                        if (!isLoading && averageDailyData.isEmpty)
+                          Center(
+                            child: Text(
+                              "No data available",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.normal,
+                                color: const Color.fromARGB(
+                                    255, 255, 255, 255), // Warna teks
+                              ),
+                            ),
+                          ),
+
+                        SizedBox(height: 8),
+
+                        //   averageDailyData.isEmpty
+                        // ? Center(child: CircularProgressIndicator())
+                        // ?:Column(),
+
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildLegendItem(Colors.yellow, "Temperature"),
+                            _buildLegendItem(Colors.blue, "Air Humidity"),
+                            _buildLegendItem(Colors.green, "Soil Humidity"),
+                          ],
+                        ),
+
+                        SizedBox(height: 16),
 
                         // Input Start Date
                         GestureDetector(
@@ -494,12 +528,17 @@ class _CustomCardState extends State<CustomCardApp> {
                                   TextEditingController(text: startDate),
                               decoration: InputDecoration(
                                 labelText: 'Start Date (YYYY-MM-DD)',
-                                border: OutlineInputBorder(),
+                                labelStyle: TextStyle(
+                                  color: Colors.white,
+                                ),
+                                border: OutlineInputBorder(
+                                    borderSide:
+                                        BorderSide(color: Colors.black)),
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10),
                         // Input End Date
                         GestureDetector(
                           onTap: () => _selectDate(context, false),
@@ -508,23 +547,42 @@ class _CustomCardState extends State<CustomCardApp> {
                               controller: TextEditingController(text: endDate),
                               decoration: InputDecoration(
                                 labelText: 'End Date (YYYY-MM-DD)',
-                                border: OutlineInputBorder(),
+                                labelStyle: TextStyle(
+                                  color: Colors.white,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8.0),
+                                  borderSide: BorderSide(
+                                    color: Colors.black,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 8),
                         // Button to fetch data
-                        ElevatedButton(
-                          onPressed: fetchAverageDailyData,
-                          child: const Text('Fetch Data'),
+                        GestureDetector(
+                          onTap: fetchAverageDailyData,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 8, horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: const Color.fromARGB(0, 255, 255, 255),
+                            ),
+                            child: const Text(
+                              'Show Graph',
+                              style: TextStyle(
+                                color: Color.fromARGB(255, 247, 247, 247),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
                         ),
+
                         const SizedBox(height: 16),
                         // Loading Indicator
-                        if (isLoading) CircularProgressIndicator(),
-                        // If no data is available
-                        if (!isLoading && averageDailyData.isEmpty)
-                          Center(child: Text("No data available")),
                       ],
                     ),
                   ),
@@ -536,6 +594,20 @@ class _CustomCardState extends State<CustomCardApp> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          color: color,
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
     );
   }
 
@@ -559,6 +631,7 @@ class _CustomCardState extends State<CustomCardApp> {
             Text(
               title,
               style: const TextStyle(
+                fontSize: 20,
                 color: Color.fromARGB(255, 0, 0, 0),
                 fontWeight: FontWeight.bold,
               ),
