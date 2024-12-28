@@ -308,8 +308,8 @@ class _CustomCardState extends State<CustomCardApp> {
                 gradient: const LinearGradient(
                   colors: [
                     Color.fromARGB(255, 25, 100, 200),
-                    Color(0xFF4A90E2),
-                    Color.fromARGB(255, 80, 92, 227)
+                    Color.fromARGB(255, 41, 133, 238),
+                    Color.fromARGB(255, 57, 118, 225)
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -411,22 +411,79 @@ class _CustomCardState extends State<CustomCardApp> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+
                   // Data Section
                   Column(
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          buildInfoCard(
-                            title: "Status",
-                            value: latestMessage.isNotEmpty
-                                ? (latestMessage == "siram"
-                                    ? "Butuh Disiram"
-                                    : "Sudah Disiram")
-                                : "No data",
-                            unit: "",
-                            color: const Color.fromARGB(255, 255, 255, 255),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withOpacity(0.2),
+                                    spreadRadius: 2,
+                                    blurRadius: 5,
+                                    offset: const Offset(
+                                        0, 3), // changes position of shadow
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // Icon
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF4A90E2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      latestMessage == "siram"
+                                          ? Icons.warning_amber_rounded
+                                          : Icons.check_circle,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  // Text Section
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          "Status",
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                        Text(
+                                          latestMessage.isNotEmpty
+                                              ? (latestMessage == "siram"
+                                                  ? "Butuh Disiram"
+                                                  : "Sudah Disiram")
+                                              : "No data",
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black54,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -502,7 +559,7 @@ class _CustomCardState extends State<CustomCardApp> {
                             ),
                           ),
 
-                        SizedBox(height: 8),
+                        SizedBox(height: 16),
 
                         //   averageDailyData.isEmpty
                         // ? Center(child: CircularProgressIndicator())
@@ -517,8 +574,8 @@ class _CustomCardState extends State<CustomCardApp> {
                           ],
                         ),
 
-                        SizedBox(height: 16),
-
+                        SizedBox(height: 8),
+    
                         // Input Start Date
                         GestureDetector(
                           onTap: () => _selectDate(context, true),
