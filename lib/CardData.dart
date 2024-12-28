@@ -1,7 +1,10 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:fl_chart/fl_chart.dart';
 
 class CustomCardApp extends StatefulWidget {
   const CustomCardApp({super.key});
@@ -15,10 +18,11 @@ class _CustomCardState extends State<CustomCardApp> {
   Map<String, dynamic> realTimeData = {};
   List<dynamic> averageDailyData = [];
   String latestMessage = "";
-  bool isLoading = true;
+  String? latestProbSiram;
+  String? latestProbTidakSiram;
+  bool isLoading = false;
   String startDate = '';
   String endDate = '';
-
 
   @override
   void initState() {
@@ -66,19 +70,107 @@ class _CustomCardState extends State<CustomCardApp> {
   }
 
   Future<void> fetchAverageDailyData() async {
-    final url = Uri.parse("$baseUrl/get_range_average_daily?start_date=$startDate&end_date=$endDate");
+    final url = Uri.parse(
+        "https://soilapi.hcorp.my.id/api/get_range_average_daily?start_date=$startDate&end_date=$endDate");
+
+    // Reset data dan tampilkan loading
+    setState(() {
+      averageDailyData = []; // Reset data ke list kosong
+      isLoading = true;
+    });
+
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
-        final data = json.decode(response.body)['data'];
+        final data = json.decode(response.body);
         setState(() {
-          averageDailyData = data;
+          averageDailyData = data['data'];
+          isLoading = false;
         });
       } else {
         print("Failed to fetch data. Status: ${response.statusCode}");
+        setState(() {
+          isLoading = false;
+        });
       }
     } catch (e) {
       print("Error fetching data: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  // Fungsi untuk mengonversi data menjadi data untuk LineChart
+  List<LineChartBarData> getLineChartData() {
+    List<FlSpot> spotsTemperature = [];
+    List<FlSpot> spotsHumidity = [];
+    List<FlSpot> spotsSoilHumidity = [];
+
+    for (int i = 0; i < averageDailyData.length; i++) {
+      final data = averageDailyData[i];
+      final temp = double.tryParse(data['avg_temperature'].toString()) ?? 0.0;
+      final humidity =
+          double.tryParse(data['avg_air_humidity'].toString()) ?? 0.0;
+      final soilHumidity =
+          double.tryParse(data['avg_soil_humidity'].toString()) ?? 0.0;
+
+      spotsTemperature.add(FlSpot(i.toDouble(), temp));
+      spotsHumidity.add(FlSpot(i.toDouble(), humidity));
+      spotsSoilHumidity.add(FlSpot(i.toDouble(), soilHumidity));
+    }
+
+    return [
+      LineChartBarData(
+        spots: spotsTemperature,
+        isCurved: true,
+        color: const Color(0xff4af699),
+        barWidth: 4,
+        isStrokeCapRound: false,
+        belowBarData: BarAreaData(show: false),
+      ),
+      LineChartBarData(
+        spots: spotsHumidity,
+        isCurved: true,
+        color: const Color(0xffaa4cfc),
+        barWidth: 4,
+        isStrokeCapRound: false,
+        belowBarData: BarAreaData(show: false),
+      ),
+      LineChartBarData(
+        spots: spotsSoilHumidity,
+        isCurved: true,
+        color: const Color(0xff27b6fc),
+        barWidth: 4,
+        isStrokeCapRound: false,
+        belowBarData: BarAreaData(show: false),
+      ),
+    ];
+  }
+
+  // Menampilkan DatePicker
+  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
+    DateTime initialDate = DateTime.now();
+    DateTime firstDate = DateTime(2000);
+    DateTime lastDate = DateTime.now();
+
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+    );
+
+    if (pickedDate != null && pickedDate != initialDate) {
+      final formattedDate =
+          "${pickedDate.year}-${pickedDate.month.toString().padLeft(2, '0')}-${pickedDate.day.toString().padLeft(2, '0')}";
+      setState(() {
+        if (isStartDate) {
+          startDate = formattedDate;
+        } else {
+          endDate = formattedDate;
+        }
+      });
     }
   }
 
@@ -90,6 +182,10 @@ class _CustomCardState extends State<CustomCardApp> {
         final data = json.decode(response.body);
         setState(() {
           latestMessage = data['data']['message'] ?? "No message available";
+          latestProbSiram =
+              data['data']['prob_siram'] ?? "No message available";
+          latestProbTidakSiram =
+              data['data']['prob_tidak_siram'] ?? "No message available";
         });
       } else {
         print("Failed to fetch latest message. Status: ${response.statusCode}");
@@ -101,6 +197,8 @@ class _CustomCardState extends State<CustomCardApp> {
 
   @override
   Widget build(BuildContext context) {
+    final hp = MediaQuery.of(context).size.height;
+    final wp = MediaQuery.of(context).size.width;
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -225,11 +323,11 @@ class _CustomCardState extends State<CustomCardApp> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Header Section
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
                             "Message",
@@ -238,6 +336,76 @@ class _CustomCardState extends State<CustomCardApp> {
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.warning_rounded,
+                                size: wp * 0.06, color: Colors.yellow),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    title: Text(
+                                      "Probability",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w700),
+                                    ),
+                                    content: Container(
+                                      margin: EdgeInsets.symmetric(
+                                          horizontal: wp * 0.01),
+                                      height: hp * 0.08,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Column(
+                                            children: [
+                                              Text(
+                                                "Tidak Siram",
+                                                style: TextStyle(
+                                                    fontSize: wp * 0.04),
+                                              ),
+                                              Text(
+                                                "$latestProbSiram",
+                                                style: TextStyle(
+                                                    fontSize: wp * 0.07,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                            ],
+                                          ),
+                                          Column(
+                                            children: [
+                                              Text(
+                                                "Siram",
+                                                style: TextStyle(
+                                                    fontSize: wp * 0.04),
+                                              ),
+                                              Text(
+                                                "$latestProbTidakSiram",
+                                                style: TextStyle(
+                                                    fontSize: wp * 0.07,
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                            ],
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                    actions: <Widget>[
+                                      TextButton(
+                                        child: Text('Tutup'),
+                                        onPressed: () {
+                                          Navigator.of(context)
+                                              .pop(); // Menutup modal
+                                        },
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -266,120 +434,102 @@ class _CustomCardState extends State<CustomCardApp> {
               ),
             ),
           ),
-
 //history
           Card(
-              elevation: 8,
-              shape: RoundedRectangleBorder(
+            elevation: 8,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [
+                    Color.fromARGB(255, 25, 100, 200),
+                    Color(0xFF4A90E2),
+                    Color.fromARGB(255, 139, 144, 194)
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color.fromARGB(255, 25, 100, 200),
-                      Color(0xFF4A90E2),
-                      Color.fromARGB(255, 139, 144, 194)
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header Section
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          "Average Daily Data",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header Section
+                  Text(
+                    "Average Daily Data",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
                     ),
+                  ),
                   const SizedBox(height: 16),
-                  // Data Section
+                  Container(
+                    height: hp * 0.5,
+                    child: Column(
+                      children: [
+                        // Grafik di atas input tanggal
+                        if (averageDailyData.isNotEmpty && !isLoading)
+                          Expanded(
+                            child: LineChart(
+                              LineChartData(
+                                gridData: FlGridData(show: true),
+                                titlesData: FlTitlesData(show: true),
+                                borderData: FlBorderData(show: true),
+                                lineBarsData: getLineChartData(),
+                              ),
+                            ),
+                          ),
 
-                  
-                  Column(
-                    children: [
-                        TextField(
-                          decoration: InputDecoration(
-                            labelText: 'Start Date (YYYY-MM-DD)',
-                            border: OutlineInputBorder(),
+                        // Input Start Date
+                        GestureDetector(
+                          onTap: () => _selectDate(context, true),
+                          child: AbsorbPointer(
+                            child: TextField(
+                              controller:
+                                  TextEditingController(text: startDate),
+                              decoration: InputDecoration(
+                                labelText: 'Start Date (YYYY-MM-DD)',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
                           ),
-                          onChanged: (value) {
-                            setState(() {
-                              startDate = value;
-                            });
-                          },
                         ),
                         const SizedBox(height: 8),
-                        TextField(
-                          decoration: InputDecoration(
-                            labelText: 'End Date (YYYY-MM-DD)',
-                            border: OutlineInputBorder(),
+                        // Input End Date
+                        GestureDetector(
+                          onTap: () => _selectDate(context, false),
+                          child: AbsorbPointer(
+                            child: TextField(
+                              controller: TextEditingController(text: endDate),
+                              decoration: InputDecoration(
+                                labelText: 'End Date (YYYY-MM-DD)',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
                           ),
-                          onChanged: (value) {
-                            setState(() {
-                              endDate = value;
-                            });
-                          },
                         ),
                         const SizedBox(height: 8),
+                        // Button to fetch data
                         ElevatedButton(
                           onPressed: fetchAverageDailyData,
                           child: const Text('Fetch Data'),
                         ),
+                        const SizedBox(height: 16),
+                        // Loading Indicator
+                        if (isLoading) CircularProgressIndicator(),
+                        // If no data is available
+                        if (!isLoading && averageDailyData.isEmpty)
+                          Center(child: Text("No data available")),
                       ],
+                    ),
                   ),
 
-                  const SizedBox(height: 16),
-
-                  averageDailyData.isEmpty
-                        ? Center(child: CircularProgressIndicator())
-                        : Column(
-                            children: averageDailyData.map<Widget>((dynamic data) {
-                              // Accessing each field from the data object
-                              return Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  buildInfoCard(
-                                    title: "Date Today",
-                                    value: data['date'] ?? "No data",
-                                    unit: "",
-                                    color: const Color.fromARGB(255, 255, 255, 255),
-                                  ),
-                                  buildInfoCard(
-                                    title: "Temp",
-                                    value: data['avg_temperature'] ?? "No data",
-                                    unit: "°C",
-                                    color: const Color.fromARGB(255, 255, 255, 255),
-                                  ),
-                                  buildInfoCard(
-                                    title: "Air Humidity",
-                                    value: data['avg_air_humidity'] ?? "No data",
-                                    unit: "%",
-                                    color: const Color.fromARGB(255, 255, 255, 255),
-                                  ),
-                                  buildInfoCard(
-                                    title: "Soil Humidity",
-                                    value: data['avg_soil_humidity'] ?? "No data",
-                                    unit: "%",
-                                    color: const Color.fromARGB(255, 255, 255, 255),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
-                          ),
+                  // Data Section
                 ],
               ),
             ),
